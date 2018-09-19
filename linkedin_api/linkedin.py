@@ -476,3 +476,14 @@ class Linkedin(object):
         )
 
         return res.status_code != 201
+
+    def get_message(self, conversation_urn_id):
+        """
+        Get a message to a given conversation.
+        """
+
+        res = self.client.session.get(
+            f"{self.client.API_BASE_URL}/messaging/conversations/{conversation_urn_id}/events",
+        )
+
+        return res.json()
