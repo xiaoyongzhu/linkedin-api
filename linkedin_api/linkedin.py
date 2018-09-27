@@ -3,6 +3,7 @@ Provides linkedin api-related code
 """
 import random
 import logging
+import datetime
 from time import sleep
 import json
 
@@ -98,6 +99,7 @@ class Linkedin(object):
         if industries:
             guides.append(f'facetIndustry->{"|".join(industries)}')
 
+        print("guides are", guides)
         params = {"guides": "List({})".format(",".join(guides))}
 
         if keywords:
@@ -421,10 +423,13 @@ class Linkedin(object):
 
         data = res.json()
 
-        item = data["elements"][0]
-        item["id"] = get_id_from_urn(item["entityUrn"])
+        if len(data["elements"]) != 0:
+            item = data["elements"][0]
+            item["id"] = get_id_from_urn(item["entityUrn"])
 
-        return item
+            return item
+        else:
+            return False
 
     def get_conversations(self):
         """
@@ -487,3 +492,94 @@ class Linkedin(object):
         )
 
         return res.json()
+
+    def connect_with_someone(self, public_id = None, message_body= None):
+        """
+        Send a message to a given conversation. If error, return true.
+        """
+        sleep(
+            random.randint(2, 5)
+        )  # sleep a random duration to try and evade suspention
+
+        payload = json.dumps(
+
+        {"emberEntityName": "growth/invitation/norm-invitation",
+         "invitee": {"com.linkedin.voyager.growth.invitation.InviteeProfile": {"profileId": public_id}},
+         "trackingId": "ch7my8mMQbKyUgtWB2IFzQ==", "message": message_body}
+         )
+
+
+        res = self.client.session.post(
+            f"{self.client.API_BASE_URL}/growth/normInvitations",
+            data=payload,
+        )
+
+        print(res)
+        return res.status_code != 201
+
+    def print_out_conversations(self):
+        all_id = self.get_all_converstaion_public_id()
+        for individual_id in all_id:
+
+            profile = self.get_profile(individual_id)
+            profile_urn_id = profile['profile_id']
+            print("----------------------------------")
+            print("profile_urn_id", profile_urn_id)
+
+            sleep(
+                random.randint(2, 5)
+            )  # sleep a random duration to try and evade suspention
+
+            conversation = self.get_conversation_details(profile_urn_id)
+            # conversation = self.get_conversation_details("ACoAAABf4zsBgVr-OlvpPwpcKlKqDsGYAjuIpys")
+
+            if conversation:
+                # sometimes the returned value is empty
+                conversation_id = conversation['id']
+
+                sleep(
+                    random.randint(2, 5)
+                )  # sleep a random duration to try and evade suspention
+
+                conversations = self.get_message(conversation_id)
+                for individual_conversation in conversations['elements']:
+                    # the response is a list and each item is an element in the list
+                    conversation_time_stamp = int(individual_conversation['createdAt'] / 1000)
+                    human_readable_time = datetime.datetime.fromtimestamp(conversation_time_stamp).strftime('%c')
+                    text = individual_conversation['eventContent']["com.linkedin.voyager.messaging.event.MessageEvent"][
+                        'body']
+                    from_people_firstname = \
+                    individual_conversation['from']["com.linkedin.voyager.messaging.MessagingMember"]['miniProfile'][
+                        'firstName']
+                    from_people_lastname = \
+                    individual_conversation['from']["com.linkedin.voyager.messaging.MessagingMember"]['miniProfile'][
+                        'lastName']
+                    if text:
+                        print(human_readable_time, from_people_firstname + " " + from_people_lastname, "says:", text)
+
+    def get_all_converstaion_public_id(self):
+
+        conversations = self.get_conversations()
+        return_list = []
+        # print(conversations['included'])
+        for individual_conversation in conversations['elements']:
+            # the response is a list and each item is an element in the list
+            all_participants = individual_conversation["participants"]
+            for invididual_participants in all_participants:
+                return_list.append(
+                    invididual_participants["com.linkedin.voyager.messaging.MessagingMember"]["miniProfile"][
+                        "publicIdentifier"])
+
+        return return_list
+        # print("length is,", len(return_list))
+    def search_and_connect(self ,keyword, message):
+        results = self.search({'keywords': keyword}, 200)
+        print(len(results), "results found")
+        for element in results[:100]:
+            profile = element["hitInfo"]["com.linkedin.voyager.search.SearchProfile"]["miniProfile"]
+            message = "Hi " + profile["firstName"] + "," + message
+
+            sleep(random.randint(20, 60))
+            self.connect_with_someone(profile["publicIdentifier"], message)
+            # print(profile["firstName"], profile["lastName"],)
+            print("request for", profile["firstName"], profile["lastName"], "sent, message", message)

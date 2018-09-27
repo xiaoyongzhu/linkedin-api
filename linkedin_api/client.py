@@ -50,6 +50,7 @@ class Client(object):
         """
         try:
             with open(settings.COOKIE_FILE_PATH, "rb") as f:
+                print("reading cookie from folder",settings.COOKIE_FILE_PATH)
                 cookies = pickle.load(f)
                 if cookies:
                     return cookies
@@ -97,6 +98,7 @@ class Client(object):
 
         # TODO raise better exceptions
         if res.status_code != 200:
+            print("res.status_code", res.status_code)
             raise Exception()
         elif data["login_result"] != "PASS":
             raise Exception()
