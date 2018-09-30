@@ -6,6 +6,7 @@ import logging
 import datetime
 from time import sleep
 import json
+import sqlite3
 
 from linkedin_api.utils.helpers import get_id_from_urn
 
@@ -28,6 +29,7 @@ class Linkedin(object):
     def __init__(self, username, password):
         self.client = Client()
         self.client.authenticate(username, password)
+        conn = sqlite3.connect('connections.db')
 
         self.logger = logger
 
@@ -576,10 +578,24 @@ class Linkedin(object):
         results = self.search({'keywords': keyword}, 200)
         print(len(results), "results found")
         for element in results[:100]:
-            profile = element["hitInfo"]["com.linkedin.voyager.search.SearchProfile"]["miniProfile"]
-            message = "Hi " + profile["firstName"] + "," + message
+            if profile["publicIdentifier"] != "UNKNOWN":
+                profile = element["hitInfo"]["com.linkedin.voyager.search.SearchProfile"]["miniProfile"]
+                message = "Hi " + profile["firstName"] + "," + message
 
-            sleep(random.randint(20, 60))
-            self.connect_with_someone(profile["publicIdentifier"], message)
-            # print(profile["firstName"], profile["lastName"],)
-            print("request for", profile["firstName"], profile["lastName"], "sent, message", message)
+                sleep(random.randint(20, 60))
+                self.connect_with_someone(profile["publicIdentifier"], message)
+                conn = sqlite3.connect('connections.db')
+                c = conn.cursor()
+
+                # Insert a row of data
+                sqlcmd = (profile["publicIdentifier"], True,False,False,False,False)
+                c.execute("INSERT INTO connections(GUID , invitation_sent, invitation_accepted, jd_sent, deeper_discussion) VALUES (?,?,?,?,?)",sqlcmd)
+
+                # Save (commit) the changes
+                conn.commit()
+
+                # We can also close the connection if we are done with it.
+                # Just be sure any changes have been committed or they will be lost.
+                conn.close()
+                # print(profile["firstName"], profile["lastName"],)
+                print("request for", profile["firstName"], profile["lastName"], "sent, message", message)

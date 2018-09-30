@@ -1,3 +1,5 @@
+
+import sqlite3
 import time
 import random
 import datetime
@@ -26,9 +28,35 @@ from linkedin_api import Linkedin
 #
 #             print(human_readable_time, from_people_firstname +" " + from_people_lastname, "says:", text)
 
-with open('credentials.json', 'r') as f:
+with open('credentials_test.json', 'r') as f:
     credentials = json.load(f)
 
+def init():
+    conn = sqlite3.connect('connections.db')
+    c = conn.cursor()
+
+    # Create table
+    c.execute('''CREATE TABLE connections
+                 (GUID varchar(255), invitation_sent bool, invitation_accepted bool, jd_sent bool, deeper_discussion bool)''')
+
+    # Insert a row of data
+    c.execute("INSERT INTO connections VALUES ('xiaoyzhu','T','T','T', 'T')")
+
+    # Save (commit) the changes
+    conn.commit()
+
+
+    # We can also close the connection if we are done with it.
+    # Just be sure any changes have been committed or they will be lost.
+    conn.close()
+
+# init()
+conn = sqlite3.connect('connections.db')
+c = conn.cursor()
+for row in c.execute('SELECT * FROM connections ORDER BY GUID'):
+    print(row)
+
+#I want to introduce a great opportunity with Foxconn in Milwaukee. Now they are hiring great talents in IOT to join them. Please connect to discuss further. Thanks!
 if credentials:
     linkedin = Linkedin(credentials['username'], credentials['password'])
 
@@ -40,8 +68,9 @@ if credentials:
     #     regions=["seattle"],
     #     # industries=[29, 1]
     # )
-    linkedin.print_out_conversations()
-    # results = linkedin.search({'keywords': 'machine learning'}, 200)
+    # linkedin.print_out_conversations()
+    results = linkedin.search({'keywords': 'iot Milwaukee'}, 200)
+
     # print(len(results), "results found")
     # for element in results[:100]:
     #     profile = element["hitInfo"]["com.linkedin.voyager.search.SearchProfile"]["miniProfile"]
@@ -51,7 +80,7 @@ if credentials:
     #     linkedin.connect_with_someone( profile["publicIdentifier"],message)
     #     # print(profile["firstName"], profile["lastName"],)
     #     print("request for", profile["firstName"],profile["lastName"], "sent, message", message)
-    # with open('result_search.json', 'w') as fp:
-    #     json.dump(results, fp)
-    # print(results)
+    with open('search_iot_Milwaukee.json', 'w') as fp:
+        json.dump(results, fp)
+    print(results)
 
